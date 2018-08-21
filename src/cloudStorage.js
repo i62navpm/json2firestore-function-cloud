@@ -25,7 +25,7 @@ module.exports = function() {
             console.log(err)
             reject(err)
           } finally {
-            console.log(`Read "${name.toUpperCase()}"!`)
+            console.log(`Read "[${name.toUpperCase()}]"!`)
           }
         })
         .on('error', reject)

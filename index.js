@@ -4,10 +4,7 @@ const listTypes = require('./config/filesConfig')
 
 // exports.json2firebase = async (event, context) => {
 const json2firebase = async (event, context) => {
-  const gcsEvent = event || {
-    bucket: 'opos-madrid-json',
-    name: 'citationList.json',
-  }
+  const gcsEvent = event
 
   const [listName] = gcsEvent.name.split('.')
   const isEmpty = await cloudFirestore.isEmpty(listName)
