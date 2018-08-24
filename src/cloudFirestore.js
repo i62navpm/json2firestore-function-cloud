@@ -46,5 +46,30 @@ module.exports = function() {
     return Promise.all(deferred)
   }
 
-  return { isEmpty, bulkInsert }
+  function bulkDelete(col) {
+    const oppRef = db.collection(col)
+    return batchDelete(oppRef)
+  }
+
+  async function batchDelete(query) {
+    return query.get().then(async snapshot => {
+      if (snapshot.size === 0) return 0
+
+      const batch = db.batch()
+      for (let doc of snapshot.docs) {
+        try {
+          const oppRef = await doc.ref.collection('opponents')
+          if (oppRef) await batchDelete(oppRef)
+
+          batch.delete(doc.ref)
+        } catch (err) {
+          console.log(err)
+        }
+      }
+
+      return batch.commit()
+    })
+  }
+
+  return { isEmpty, bulkInsert, bulkDelete }
 }
