@@ -1,5 +1,6 @@
 const admin = require('firebase-admin')
 const functions = require('firebase-functions')
+const listTypes = require('../config/filesConfig')
 
 module.exports = function() {
   admin.initializeApp(functions.config().firebase)
@@ -11,6 +12,14 @@ module.exports = function() {
       .collection(doc)
       .get()
       .then(snapshot => !snapshot.size)
+  }
+
+  function isDynamicList(listName) {
+    return listTypes.dynamicLists.indexOf(listName) !== -1
+  }
+
+  function isStaticList(listName) {
+    return listTypes.staticLists.indexOf(listName) !== -1
   }
 
   function bulkInsert(doc, data) {
@@ -26,7 +35,12 @@ module.exports = function() {
           .doc(specialty)
           .collection('opponents')
           .doc()
-        batch.set(oppRef, { ...opponent, count: count++ })
+
+        const data = { ...opponent, count: count++ }
+
+        if (isStaticList(doc)) data.position = data.count
+
+        if (doc) batch.set(oppRef, data)
 
         if (count % firestoreBulkLimit === 0) {
           deferred.push(batch.commit())
@@ -71,5 +85,5 @@ module.exports = function() {
     })
   }
 
-  return { isEmpty, bulkInsert, bulkDelete }
+  return { isEmpty, isDynamicList, isStaticList, bulkInsert, bulkDelete }
 }

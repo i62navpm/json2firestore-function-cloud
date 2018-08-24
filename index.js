@@ -1,6 +1,5 @@
 const cloudFirestore = require('./src/cloudFirestore')()
 const cloudStorage = require('./src/cloudStorage')()
-const listTypes = require('./config/filesConfig')
 
 // exports.json2firebase = async (event, context) => {
 const json2firebase = async (event, context) => {
@@ -8,7 +7,7 @@ const json2firebase = async (event, context) => {
 
   const [listName] = gcsEvent.name.split('.')
   const isEmpty = await cloudFirestore.isEmpty(listName)
-  const isDynamicList = listTypes.dynamicLists.indexOf(listName) !== -1
+  const isDynamicList = cloudFirestore.isDynamicList(listName)
 
   if (isEmpty) {
     try {
