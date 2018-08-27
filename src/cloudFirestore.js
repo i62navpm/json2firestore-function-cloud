@@ -149,11 +149,14 @@ module.exports = function() {
             }
           })
 
-          batch.update(specialty.ref, {
-            [`events.${new Date().toISOString()}`]: {
-              outputs,
-              inputs,
-            },
+          const eventRef = specialty.ref
+            .collection('events')
+            .doc(new Date().toISOString())
+
+          batch.set(eventRef, {
+            list: listName,
+            outputs,
+            inputs,
           })
           deferred.push(batch.commit())
         }
