@@ -95,7 +95,7 @@ module.exports = function() {
     })
   }
 
-  async function updateTransaction(listName, data) {
+  async function bulkUpdate(listName, data) {
     const staticLists = listTypes.staticLists
 
     const dynamicOpponents = Object.entries(data)
@@ -175,6 +175,6 @@ module.exports = function() {
     isStaticList,
     bulkInsert,
     bulkDelete,
-    updateTransaction,
+    bulkUpdate,
   }
 }

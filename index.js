@@ -3,7 +3,10 @@ const cloudStorage = require('./src/cloudStorage')()
 
 // exports.json2firebase = async (event, context) => {
 const json2firebase = async (event, context) => {
-  const gcsEvent = event
+  const gcsEvent = event || {
+    bucket: 'opos-madrid-json',
+    name: 'citationList.json',
+  }
 
   const [listName] = gcsEvent.name.split('.')
   const isEmpty = await cloudFirestore.isEmpty(listName)
@@ -31,7 +34,7 @@ const json2firebase = async (event, context) => {
       console.log('All dynamics documents inserted!')
 
       console.log(`Updating static list with the outputs of: ${listName}...`)
-      await cloudFirestore.updateTransaction(listName, result)
+      await cloudFirestore.bulkUpdate(listName, result)
 
       console.log('All documents inserted and updated!')
     } catch (err) {
