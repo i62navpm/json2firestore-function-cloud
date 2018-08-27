@@ -128,18 +128,20 @@ module.exports = function() {
 
             outputs += !!opponentMatched
 
-            const data = opponentMatched
-              ? getInfoEventOut(
-                  getPosition(listName),
-                  staticOpponent,
-                  opponentMatched
-                )
-              : {
-                  position:
-                    staticOpponent.info.position < 0
-                      ? staticOpponent.info.position
-                      : position++,
-                }
+            let data = { position: staticOpponent.info.position }
+
+            if (opponentMatched) {
+              opponent.ref
+                .collection('info')
+                .doc(new Date().toISOString())
+                .set({ ...opponentMatched.info, ...{ listName } })
+              data.position = getPosition(listName)
+              data.status = 'OUT'
+            } else {
+              if (staticOpponent.info.position >= 0) {
+                data.position = position++
+              }
+            }
 
             batch.update(opponent.ref, data)
 
@@ -164,21 +166,6 @@ module.exports = function() {
       return Promise.all(deferred)
     } catch (err) {
       console.log(err)
-    }
-  }
-
-  function getInfoEventOut(position, staticOpponent, opponentMatched) {
-    return {
-      status: 'OUT',
-      position,
-      info: staticOpponent.info
-        ? {
-            ...staticOpponent.info,
-            ...{
-              [new Date().toISOString()]: opponentMatched.info,
-            },
-          }
-        : { [new Date().toISOString()]: opponentMatched.info },
     }
   }
 
