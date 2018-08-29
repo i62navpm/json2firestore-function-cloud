@@ -16,7 +16,16 @@ const json2firebase = async (event, context) => {
       let result = await cloudStorage.getFile(gcsEvent)
       await cloudFirestore.bulkInsert(listName, result)
 
-      console.log('All documents inserted!')
+      console.log('All documents are inserted!')
+
+      if (isDynamicList) {
+        console.log(`Updating static list with the outputs of: ${listName}...`)
+        await cloudFirestore.bulkUpdate(listName, result)
+
+        await cloudNotifications.sendNotifications(listName)
+        console.log('All documents are updated!')
+      }
+
       return true
     } catch (err) {
       console.log(err)
@@ -29,13 +38,13 @@ const json2firebase = async (event, context) => {
       console.log(`Adding the list: ${listName}...`)
       let result = await cloudStorage.getFile(gcsEvent)
       await cloudFirestore.bulkInsert(listName, result)
-      console.log('All dynamics documents inserted!')
+      console.log('All dynamics documents are inserted!')
 
       console.log(`Updating static list with the outputs of: ${listName}...`)
       await cloudFirestore.bulkUpdate(listName, result)
 
       await cloudNotifications.sendNotifications(listName)
-      console.log('All documents inserted and updated!')
+      console.log('All documents are inserted and updated!')
     } catch (err) {
       console.log(err)
     }
