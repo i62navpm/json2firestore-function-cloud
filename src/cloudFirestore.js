@@ -136,7 +136,6 @@ module.exports = function() {
                 .doc(new Date().toISOString())
                 .set({ ...opponentMatched.info, ...{ listName } })
               data.position = getPosition(listName)
-              data.status = 'OUT'
             } else {
               if (staticOpponent.info.position >= 0) {
                 data.position = position++

@@ -2,8 +2,7 @@ const cloudFirestore = require('./src/cloudFirestore')()
 const cloudStorage = require('./src/cloudStorage')()
 const cloudNotifications = require('./src/cloudNotifications')()
 
-// exports.json2firebase = async (event, context) => {
-const json2firebase = async (event, context) => {
+exports.json2firebase = async (event, context) => {
   const gcsEvent = event
 
   const [listName] = gcsEvent.name.split('.')
@@ -50,5 +49,3 @@ const json2firebase = async (event, context) => {
     }
   }
 }
-
-json2firebase()
