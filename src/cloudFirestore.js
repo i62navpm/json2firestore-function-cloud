@@ -138,6 +138,10 @@ module.exports = function() {
               data.position = getPosition(listName)
             } else {
               if (staticOpponent.info.position >= 0) {
+                opponent.ref
+                  .collection('positionMovements')
+                  .doc(new Date().toISOString())
+                  .set({ position: data.position })
                 data.position = position++
               }
             }
