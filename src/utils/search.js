@@ -1,5 +1,6 @@
 function getNameAndSurname(nameAndSurname = '') {
-  return nameAndSurname.split(',')
+  const [apellidos = '', nombre = ''] = nameAndSurname.split(',')
+  return [apellidos.trim(), nombre.trim()]
 }
 
 function getPartDni(dni = '') {
@@ -8,15 +9,15 @@ function getPartDni(dni = '') {
 
 function parseOpponent(opponent) {
   let { apellidosynombre, dni, ...info } = opponent
-  const [nombre, apellidos] = getNameAndSurname(apellidosynombre)
+  const [apellidos, nombre] = getNameAndSurname(apellidosynombre)
   dni = getPartDni(dni)
-  return { nombre, apellidos, dni, info }
+  return { apellidos, nombre, dni, info }
 }
 
 function isSameOpponent(staticOpponent, dynamicOpponent) {
   if (
-    staticOpponent.apellidos === dynamicOpponent.apellidos &&
-    staticOpponent.nombre === dynamicOpponent.nombre
+    staticOpponent.apellidos.includes(dynamicOpponent.apellidos) &&
+    staticOpponent.nombre.includes(dynamicOpponent.nombre)
   ) {
     return dynamicOpponent.dni
       ? staticOpponent.dni === dynamicOpponent.dni
