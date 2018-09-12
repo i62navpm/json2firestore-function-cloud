@@ -30,6 +30,7 @@ function getPosition(list) {
   const mapObj = {
     assignmentList: -1,
     citationList: -2,
+    voluntaryListDynamic: -3,
     default: -1,
   }
 
