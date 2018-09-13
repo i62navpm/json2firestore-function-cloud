@@ -15,6 +15,10 @@ module.exports = function() {
       .then(snapshot => !snapshot.size)
   }
 
+  function isInputList(listName) {
+    return listTypes.InputLists.indexOf(listName) !== -1
+  }
+
   function isDynamicList(listName) {
     return listTypes.dynamicLists.indexOf(listName) !== -1
   }
@@ -97,7 +101,7 @@ module.exports = function() {
 
   async function bulkUpdate(listName, data) {
     const staticLists = listTypes.staticLists
-
+    const inputListIs = isInputList(listName)
     const dynamicOpponents = Object.entries(data)
       .map(([, opponents]) => opponents)
       .reduce((acc, bef) => [...acc, ...bef], [])
@@ -126,24 +130,36 @@ module.exports = function() {
               isSameOpponent(staticOpponent, dynamicOpponent)
             )
 
-            outputs += !!opponentMatched
+            if (inputListIs) {
+              inputs += !!opponentMatched
+            } else {
+              outputs += !!opponentMatched
+            }
 
             let data = { position: staticOpponent.info.position }
 
-            if (opponentMatched) {
+            if (opponentMatched && !inputListIs) {
               opponent.ref
                 .collection('info')
                 .doc(new Date().toISOString())
                 .set({ ...opponentMatched.info, ...{ listName } })
               data.position = getPosition(listName)
-            } else {
-              if (staticOpponent.info.position >= 0) {
-                opponent.ref
-                  .collection('positionMovements')
-                  .doc(new Date().toISOString())
-                  .set({ position: data.position })
-                data.position = position++
-              }
+            } else if (opponentMatched && inputListIs) {
+              opponent.ref
+                .collection('info')
+                .doc(new Date().toISOString())
+                .set({ ...opponentMatched.info, ...{ listName } })
+              opponent.ref
+                .collection('positionMovements')
+                .doc(new Date().toISOString())
+                .set({ position })
+              data.position = position++
+            } else if (staticOpponent.info.position >= 0) {
+              opponent.ref
+                .collection('positionMovements')
+                .doc(new Date().toISOString())
+                .set({ position: data.position })
+              data.position = position++
             }
 
             batch.update(opponent.ref, data)
@@ -174,6 +190,7 @@ module.exports = function() {
 
   return {
     isEmpty,
+    isInputList,
     isDynamicList,
     isStaticList,
     bulkInsert,
