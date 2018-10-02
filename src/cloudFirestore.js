@@ -22,6 +22,9 @@ module.exports = function() {
   function isDynamicList(listName) {
     return listTypes.dynamicLists.indexOf(listName) !== -1
   }
+  function isNextList(listName) {
+    return listTypes.nextLists.indexOf(listName) !== -1
+  }
 
   function isStaticList(listName) {
     return listTypes.staticLists.indexOf(listName) !== -1
@@ -188,13 +191,82 @@ module.exports = function() {
     }
   }
 
+  async function bulkNextUpdate(listName, data) {
+    const staticLists = listTypes.staticNextLists
+    let batch = db.batch()
+    let counter = 0
+
+    try {
+      let deferred = []
+      const specialties = Object.keys(data)
+      for (let list of staticLists) {
+        for (let specialty of specialties) {
+          const docSnapshot = await db
+            .collection(list)
+            .doc(specialty)
+            .collection('opponents')
+            .where('position', '>=', 0)
+            .orderBy('position')
+            .get()
+
+          const [nextOppositor = {}] = data[specialty]
+          const indexOppositor = docSnapshot.docs.findIndex(doc => {
+            return doc
+              .data()
+              .apellidosynombre.includes(nextOppositor.apellidosynombre)
+          })
+
+          if (indexOppositor !== -1) {
+            docSnapshot.docs.forEach((doc, index) => {
+              if (index < indexOppositor) {
+                batch.update(doc.ref, { position: getPosition(listName) })
+                ++counter
+                if (counter % firestoreBulkLimit === 0) {
+                  deferred.push(batch.commit())
+                  batch = db.batch()
+                }
+              } else {
+                batch.update(doc.ref, { position: index - indexOppositor })
+                ++counter
+                if (counter % firestoreBulkLimit === 0) {
+                  deferred.push(batch.commit())
+                  batch = db.batch()
+                }
+              }
+            })
+            const eventRef = db
+              .collection(list)
+              .doc(specialty)
+              .collection('events')
+              .doc(new Date().toISOString())
+            batch.set(eventRef, {
+              list: listName,
+              outputs: indexOppositor,
+            })
+            ++counter
+            if (counter % firestoreBulkLimit === 0) {
+              deferred.push(batch.commit())
+              batch = db.batch()
+            }
+          }
+        }
+      }
+
+      return Promise.all(deferred)
+    } catch (err) {
+      console.log(err)
+    }
+  }
+
   return {
     isEmpty,
     isInputList,
     isDynamicList,
     isStaticList,
+    isNextList,
     bulkInsert,
     bulkDelete,
     bulkUpdate,
+    bulkNextUpdate,
   }
 }
