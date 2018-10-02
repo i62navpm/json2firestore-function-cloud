@@ -6,7 +6,10 @@ module.exports = function() {
   const db = admin.firestore()
 
   async function getFirestoreUsers() {
-    const snapshot = await db.collection('users').get()
+    const snapshot = await db
+      .collection('users')
+      .where('emailNotifications', '==', true)
+      .get()
     let users = []
     for (let doc of snapshot.docs) {
       let user = await doc.ref.get()
