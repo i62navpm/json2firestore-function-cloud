@@ -32,6 +32,7 @@ function getPosition(list) {
     citationList: -2,
     voluntaryListDynamic: -3,
     nextCitationList: -4,
+    nextVoluntaryList: -4,
     default: -1,
   }
 

@@ -208,14 +208,12 @@ module.exports = function() {
             .where('position', '>=', 0)
             .orderBy('position')
             .get()
-
           const [nextOppositor = {}] = data[specialty]
           const indexOppositor = docSnapshot.docs.findIndex(doc => {
             return doc
               .data()
               .apellidosynombre.includes(nextOppositor.apellidosynombre)
           })
-
           if (indexOppositor !== -1) {
             docSnapshot.docs.forEach((doc, index) => {
               if (index < indexOppositor) {
@@ -251,10 +249,169 @@ module.exports = function() {
           }
         }
       }
+      return Promise.all(deferred)
+    } catch (err) {
+      console.log(err)
+    }
+  }
+
+  async function bulkNextVoluntaryUpdate(listName, data) {
+    try {
+      data = require('../voluntaryListDynamic.json')
+      listName = 'nextVoluntaryLists'
+      const voluntaryList = 'voluntaryList'
+
+      let deferred = []
+
+      const specialties = Object.keys(data)
+
+      for (let specialty of specialties) {
+        let batch = db.batch()
+        let counter = 0
+        let outputs = 0
+        let total = 0
+        const docSnapshot = await db
+          .collection(voluntaryList)
+          .doc(specialty)
+          .collection('opponents')
+          .orderBy('count')
+          .get()
+        const [nextOppositor = {}] = data[specialty].sort(
+          (a, b) => +b.orden - +a.orden
+        )
+        const indexOppositor = docSnapshot.docs.findIndex(doc => {
+          return doc
+            .data()
+            .apellidosynombre.includes(nextOppositor.apellidosynombre)
+        })
+        if (indexOppositor !== -1) {
+          docSnapshot.docs.forEach((doc, index) => {
+            if (doc.data().position < 0) return
+            if (index <= indexOppositor) {
+              batch.update(doc.ref, { position: getPosition(listName) })
+              ++outputs
+              ++total
+              if (total % firestoreBulkLimit === 0) {
+                deferred.push(batch.commit())
+                batch = db.batch()
+              }
+            } else {
+              batch.update(doc.ref, { position: counter })
+
+              ++counter
+              ++total
+              if (total % firestoreBulkLimit === 0) {
+                deferred.push(batch.commit())
+                batch = db.batch()
+              }
+            }
+          })
+          const eventRef = db
+            .collection(voluntaryList)
+            .doc(specialty)
+            .collection('events')
+            .doc(new Date().toISOString())
+          batch.set(eventRef, {
+            list: listName,
+            outputs,
+          })
+          ++total
+          if (total % firestoreBulkLimit === 0) {
+            deferred.push(batch.commit())
+            batch = db.batch()
+          }
+        }
+        deferred.push(batch.commit())
+      }
 
       return Promise.all(deferred)
     } catch (err) {
       console.log(err)
+    }
+  }
+
+  async function recalcVoluntary() {
+    const staticLists = listTypes.staticNextLists
+    const listName = 'nextCitationList'
+    let deferred = []
+
+    try {
+      for (let list of staticLists) {
+        const specialtiesSnapshot = await db.collection(list).get()
+        for (let { id } of specialtiesSnapshot.docs) {
+          let batch = db.batch()
+          let posUnknown = 0
+          const docSnapshot = await db
+            .collection(list)
+            .doc(id)
+            .collection('opponents')
+            .where('position', '==', -4)
+            .get()
+
+          for (let unknownOpponentStatus of docSnapshot.docs) {
+            const matchSnapshot = await db
+              .collection('voluntaryList')
+              .doc(id)
+              .collection('opponents')
+              .where(
+                'apellidosynombre',
+                '==',
+                unknownOpponentStatus.data().apellidosynombre
+              )
+              .get()
+
+            if (!matchSnapshot.empty) {
+              let [doc] = matchSnapshot.docs
+              if (doc.data().position >= 0) {
+                batch.update(doc.ref, { position: getPosition(listName) })
+                ++posUnknown
+                if (posUnknown % firestoreBulkLimit === 0) {
+                  deferred.push(batch.commit())
+                  batch = db.batch()
+                }
+              }
+            }
+          }
+          if (posUnknown) {
+            const eventRef = db
+              .collection('voluntaryList')
+              .doc(id)
+              .collection('events')
+              .doc(new Date().toISOString())
+            batch.set(eventRef, {
+              list: listName,
+              outputs: posUnknown,
+            })
+            if (posUnknown % firestoreBulkLimit === 0) {
+              deferred.push(batch.commit())
+              batch = db.batch()
+            }
+          }
+          deferred.push(batch.commit())
+        }
+      }
+
+      const docSnapshot = await db.collection('voluntaryList').get()
+      for (let specialty of docSnapshot.docs) {
+        let batch = db.batch()
+        let rePosition = 0
+        const specialtySnapshot = await specialty.ref
+          .collection('opponents')
+          .where('position', '>=', 0)
+          .orderBy('position')
+          .get()
+
+        for (let opponent of specialtySnapshot.docs) {
+          batch.update(opponent.ref, { position: rePosition++ })
+          if (rePosition % firestoreBulkLimit === 0) {
+            deferred.push(batch.commit())
+            batch = db.batch()
+          }
+        }
+        deferred.push(batch.commit())
+      }
+    } catch (err) {
+      console.error(err)
     }
   }
 
@@ -268,5 +425,7 @@ module.exports = function() {
     bulkDelete,
     bulkUpdate,
     bulkNextUpdate,
+    recalcVoluntary,
+    bulkNextVoluntaryUpdate,
   }
 }
