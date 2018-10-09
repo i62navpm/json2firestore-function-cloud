@@ -193,7 +193,7 @@ module.exports = function() {
 
   async function bulkNextUpdate(listName, data) {
     const staticLists = listTypes.staticNextLists
-    let batch = db.batch()
+
     let counter = 0
 
     try {
@@ -201,6 +201,8 @@ module.exports = function() {
       const specialties = Object.keys(data)
       for (let list of staticLists) {
         for (let specialty of specialties) {
+          let batch = db.batch()
+
           const docSnapshot = await db
             .collection(list)
             .doc(specialty)
@@ -246,6 +248,7 @@ module.exports = function() {
               deferred.push(batch.commit())
               batch = db.batch()
             }
+            deferred.push(batch.commit())
           }
         }
       }
